@@ -83,8 +83,11 @@ import { ServerRoute as ApiLogoutServerRouteImport } from './routes/api/logout'
 import { ServerRoute as ApiHealthServerRouteImport } from './routes/api/health'
 import { ServerRoute as ApiStripeWebhookServerRouteImport } from './routes/api/stripe/webhook'
 import { ServerRoute as ApiLoginGoogleIndexServerRouteImport } from './routes/api/login/google/index'
+import { ServerRoute as ApiConnectStripeIndexServerRouteImport } from './routes/api/connect/stripe/index'
 import { ServerRoute as ApiSegmentsSegmentIdVideoServerRouteImport } from './routes/api/segments/$segmentId/video'
 import { ServerRoute as ApiLoginGoogleCallbackIndexServerRouteImport } from './routes/api/login/google/callback/index'
+import { ServerRoute as ApiConnectStripeRefreshIndexServerRouteImport } from './routes/api/connect/stripe/refresh/index'
+import { ServerRoute as ApiConnectStripeCallbackIndexServerRouteImport } from './routes/api/connect/stripe/callback/index'
 
 const LearnSlugRouteImport = createFileRoute('/learn/$slug')()
 const rootServerRouteImport = createServerRootRoute()
@@ -451,6 +454,12 @@ const ApiLoginGoogleIndexServerRoute =
     path: '/api/login/google/',
     getParentRoute: () => rootServerRouteImport,
   } as any)
+const ApiConnectStripeIndexServerRoute =
+  ApiConnectStripeIndexServerRouteImport.update({
+    id: '/api/connect/stripe/',
+    path: '/api/connect/stripe/',
+    getParentRoute: () => rootServerRouteImport,
+  } as any)
 const ApiSegmentsSegmentIdVideoServerRoute =
   ApiSegmentsSegmentIdVideoServerRouteImport.update({
     id: '/api/segments/$segmentId/video',
@@ -461,6 +470,18 @@ const ApiLoginGoogleCallbackIndexServerRoute =
   ApiLoginGoogleCallbackIndexServerRouteImport.update({
     id: '/api/login/google/callback/',
     path: '/api/login/google/callback/',
+    getParentRoute: () => rootServerRouteImport,
+  } as any)
+const ApiConnectStripeRefreshIndexServerRoute =
+  ApiConnectStripeRefreshIndexServerRouteImport.update({
+    id: '/api/connect/stripe/refresh/',
+    path: '/api/connect/stripe/refresh/',
+    getParentRoute: () => rootServerRouteImport,
+  } as any)
+const ApiConnectStripeCallbackIndexServerRoute =
+  ApiConnectStripeCallbackIndexServerRouteImport.update({
+    id: '/api/connect/stripe/callback/',
+    path: '/api/connect/stripe/callback/',
     getParentRoute: () => rootServerRouteImport,
   } as any)
 
@@ -915,7 +936,10 @@ export interface FileServerRoutesByFullPath {
   '/api/logout': typeof ApiLogoutServerRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookServerRoute
   '/api/segments/$segmentId/video': typeof ApiSegmentsSegmentIdVideoServerRoute
+  '/api/connect/stripe': typeof ApiConnectStripeIndexServerRoute
   '/api/login/google': typeof ApiLoginGoogleIndexServerRoute
+  '/api/connect/stripe/callback': typeof ApiConnectStripeCallbackIndexServerRoute
+  '/api/connect/stripe/refresh': typeof ApiConnectStripeRefreshIndexServerRoute
   '/api/login/google/callback': typeof ApiLoginGoogleCallbackIndexServerRoute
 }
 export interface FileServerRoutesByTo {
@@ -924,7 +948,10 @@ export interface FileServerRoutesByTo {
   '/api/logout': typeof ApiLogoutServerRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookServerRoute
   '/api/segments/$segmentId/video': typeof ApiSegmentsSegmentIdVideoServerRoute
+  '/api/connect/stripe': typeof ApiConnectStripeIndexServerRoute
   '/api/login/google': typeof ApiLoginGoogleIndexServerRoute
+  '/api/connect/stripe/callback': typeof ApiConnectStripeCallbackIndexServerRoute
+  '/api/connect/stripe/refresh': typeof ApiConnectStripeRefreshIndexServerRoute
   '/api/login/google/callback': typeof ApiLoginGoogleCallbackIndexServerRoute
 }
 export interface FileServerRoutesById {
@@ -934,7 +961,10 @@ export interface FileServerRoutesById {
   '/api/logout': typeof ApiLogoutServerRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookServerRoute
   '/api/segments/$segmentId/video': typeof ApiSegmentsSegmentIdVideoServerRoute
+  '/api/connect/stripe/': typeof ApiConnectStripeIndexServerRoute
   '/api/login/google/': typeof ApiLoginGoogleIndexServerRoute
+  '/api/connect/stripe/callback/': typeof ApiConnectStripeCallbackIndexServerRoute
+  '/api/connect/stripe/refresh/': typeof ApiConnectStripeRefreshIndexServerRoute
   '/api/login/google/callback/': typeof ApiLoginGoogleCallbackIndexServerRoute
 }
 export interface FileServerRouteTypes {
@@ -945,7 +975,10 @@ export interface FileServerRouteTypes {
     | '/api/logout'
     | '/api/stripe/webhook'
     | '/api/segments/$segmentId/video'
+    | '/api/connect/stripe'
     | '/api/login/google'
+    | '/api/connect/stripe/callback'
+    | '/api/connect/stripe/refresh'
     | '/api/login/google/callback'
   fileServerRoutesByTo: FileServerRoutesByTo
   to:
@@ -954,7 +987,10 @@ export interface FileServerRouteTypes {
     | '/api/logout'
     | '/api/stripe/webhook'
     | '/api/segments/$segmentId/video'
+    | '/api/connect/stripe'
     | '/api/login/google'
+    | '/api/connect/stripe/callback'
+    | '/api/connect/stripe/refresh'
     | '/api/login/google/callback'
   id:
     | '__root__'
@@ -963,7 +999,10 @@ export interface FileServerRouteTypes {
     | '/api/logout'
     | '/api/stripe/webhook'
     | '/api/segments/$segmentId/video'
+    | '/api/connect/stripe/'
     | '/api/login/google/'
+    | '/api/connect/stripe/callback/'
+    | '/api/connect/stripe/refresh/'
     | '/api/login/google/callback/'
   fileServerRoutesById: FileServerRoutesById
 }
@@ -973,7 +1012,10 @@ export interface RootServerRouteChildren {
   ApiLogoutServerRoute: typeof ApiLogoutServerRoute
   ApiStripeWebhookServerRoute: typeof ApiStripeWebhookServerRoute
   ApiSegmentsSegmentIdVideoServerRoute: typeof ApiSegmentsSegmentIdVideoServerRoute
+  ApiConnectStripeIndexServerRoute: typeof ApiConnectStripeIndexServerRoute
   ApiLoginGoogleIndexServerRoute: typeof ApiLoginGoogleIndexServerRoute
+  ApiConnectStripeCallbackIndexServerRoute: typeof ApiConnectStripeCallbackIndexServerRoute
+  ApiConnectStripeRefreshIndexServerRoute: typeof ApiConnectStripeRefreshIndexServerRoute
   ApiLoginGoogleCallbackIndexServerRoute: typeof ApiLoginGoogleCallbackIndexServerRoute
 }
 
@@ -1487,6 +1529,13 @@ declare module '@tanstack/react-start/server' {
       preLoaderRoute: typeof ApiLoginGoogleIndexServerRouteImport
       parentRoute: typeof rootServerRouteImport
     }
+    '/api/connect/stripe/': {
+      id: '/api/connect/stripe/'
+      path: '/api/connect/stripe'
+      fullPath: '/api/connect/stripe'
+      preLoaderRoute: typeof ApiConnectStripeIndexServerRouteImport
+      parentRoute: typeof rootServerRouteImport
+    }
     '/api/segments/$segmentId/video': {
       id: '/api/segments/$segmentId/video'
       path: '/api/segments/$segmentId/video'
@@ -1499,6 +1548,20 @@ declare module '@tanstack/react-start/server' {
       path: '/api/login/google/callback'
       fullPath: '/api/login/google/callback'
       preLoaderRoute: typeof ApiLoginGoogleCallbackIndexServerRouteImport
+      parentRoute: typeof rootServerRouteImport
+    }
+    '/api/connect/stripe/refresh/': {
+      id: '/api/connect/stripe/refresh/'
+      path: '/api/connect/stripe/refresh'
+      fullPath: '/api/connect/stripe/refresh'
+      preLoaderRoute: typeof ApiConnectStripeRefreshIndexServerRouteImport
+      parentRoute: typeof rootServerRouteImport
+    }
+    '/api/connect/stripe/callback/': {
+      id: '/api/connect/stripe/callback/'
+      path: '/api/connect/stripe/callback'
+      fullPath: '/api/connect/stripe/callback'
+      preLoaderRoute: typeof ApiConnectStripeCallbackIndexServerRouteImport
       parentRoute: typeof rootServerRouteImport
     }
   }
@@ -1664,7 +1727,12 @@ const rootServerRouteChildren: RootServerRouteChildren = {
   ApiLogoutServerRoute: ApiLogoutServerRoute,
   ApiStripeWebhookServerRoute: ApiStripeWebhookServerRoute,
   ApiSegmentsSegmentIdVideoServerRoute: ApiSegmentsSegmentIdVideoServerRoute,
+  ApiConnectStripeIndexServerRoute: ApiConnectStripeIndexServerRoute,
   ApiLoginGoogleIndexServerRoute: ApiLoginGoogleIndexServerRoute,
+  ApiConnectStripeCallbackIndexServerRoute:
+    ApiConnectStripeCallbackIndexServerRoute,
+  ApiConnectStripeRefreshIndexServerRoute:
+    ApiConnectStripeRefreshIndexServerRoute,
   ApiLoginGoogleCallbackIndexServerRoute:
     ApiLoginGoogleCallbackIndexServerRoute,
 }

@@ -17,4 +17,7 @@ export const env = {
   AWS_SES_SECRET_ACCESS_KEY: process.env.AWS_SES_SECRET_ACCESS_KEY!,
   AWS_SES_REGION: process.env.AWS_SES_REGION || "us-east-1",
   FROM_EMAIL_ADDRESS: process.env.FROM_EMAIL_ADDRESS!,
+  // System user ID for automatic operations (e.g., automatic affiliate payouts)
+  // This should reference a dedicated system account in the database
+  SYSTEM_USER_ID: parseInt(process.env.SYSTEM_USER_ID || "1", 10),
 };

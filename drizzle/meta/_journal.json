@@ -309,6 +309,13 @@
       "when": 1765986032884,
       "tag": "0043_friendly_puppet_master",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1766006092333,
+      "tag": "0044_boring_franklin_richards",
+      "breakpoints": true
     }
   ]
 }

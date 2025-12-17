@@ -250,18 +250,27 @@ export const affiliates = tableCreator(
       .references(() => users.id, { onDelete: "cascade" })
       .unique(),
     affiliateCode: text("affiliateCode").notNull().unique(),
-    paymentLink: text("paymentLink").notNull(),
+    paymentMethod: text("paymentMethod").notNull().default("link"), // 'link' or 'stripe'
+    paymentLink: text("paymentLink"),
     commissionRate: integer("commissionRate").notNull().default(30),
     totalEarnings: integer("totalEarnings").notNull().default(0),
     paidAmount: integer("paidAmount").notNull().default(0),
     unpaidBalance: integer("unpaidBalance").notNull().default(0),
     isActive: boolean("isActive").notNull().default(true),
+    // Stripe Connect fields
+    stripeConnectAccountId: text("stripeConnectAccountId"),
+    stripeAccountStatus: text("stripeAccountStatus").notNull().default("not_started"), // 'not_started', 'onboarding', 'active', 'restricted'
+    stripeChargesEnabled: boolean("stripeChargesEnabled").notNull().default(false),
+    stripePayoutsEnabled: boolean("stripePayoutsEnabled").notNull().default(false),
+    stripeDetailsSubmitted: boolean("stripeDetailsSubmitted").notNull().default(false),
+    lastStripeSync: timestamp("lastStripeSync"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => [
     index("affiliates_user_id_idx").on(table.userId),
     index("affiliates_code_idx").on(table.affiliateCode),
+    uniqueIndex("affiliates_stripe_account_idx").on(table.stripeConnectAccountId),
   ]
 );
 
@@ -301,6 +310,7 @@ export const affiliatePayouts = tableCreator(
     amount: integer("amount").notNull(),
     paymentMethod: text("paymentMethod").notNull(),
     transactionId: text("transactionId"),
+    stripeTransferId: text("stripeTransferId"), // For automatic Stripe Connect payouts
     notes: text("notes"),
     paidAt: timestamp("paid_at").notNull().defaultNow(),
     paidBy: serial("paidBy")
@@ -309,6 +319,7 @@ export const affiliatePayouts = tableCreator(
   },
   (table) => [
     index("payouts_affiliate_paid_idx").on(table.affiliateId, table.paidAt),
+    uniqueIndex("payouts_stripe_transfer_idx").on(table.stripeTransferId),
   ]
 );
 
