@@ -204,6 +204,7 @@ export async function getAffiliatePayouts(affiliateId: number) {
       amount: affiliatePayouts.amount,
       paymentMethod: affiliatePayouts.paymentMethod,
       transactionId: affiliatePayouts.transactionId,
+      stripeTransferId: affiliatePayouts.stripeTransferId,
       notes: affiliatePayouts.notes,
       paidAt: affiliatePayouts.paidAt,
       // Don't expose admin email - only show display name for privacy
@@ -226,19 +227,27 @@ export async function getAllAffiliatesWithStats() {
       userName: profiles.displayName,
       affiliateCode: affiliates.affiliateCode,
       paymentLink: affiliates.paymentLink,
+      paymentMethod: affiliates.paymentMethod,
       commissionRate: affiliates.commissionRate,
       totalEarnings: affiliates.totalEarnings,
       paidAmount: affiliates.paidAmount,
       unpaidBalance: affiliates.unpaidBalance,
       isActive: affiliates.isActive,
       createdAt: affiliates.createdAt,
+      // Stripe Connect fields
+      stripeConnectAccountId: affiliates.stripeConnectAccountId,
+      stripeAccountStatus: affiliates.stripeAccountStatus,
+      stripeChargesEnabled: affiliates.stripeChargesEnabled,
+      stripePayoutsEnabled: affiliates.stripePayoutsEnabled,
+      stripeDetailsSubmitted: affiliates.stripeDetailsSubmitted,
+      lastStripeSync: affiliates.lastStripeSync,
       totalReferrals: sql<number>`(
-        select count(*)::int from ${affiliateReferrals} 
+        select count(*)::int from ${affiliateReferrals}
         where ${affiliateReferrals.affiliateId} = ${affiliates.id}
       )`,
       lastReferralDate: sql<Date | null>`(
-        select max(${affiliateReferrals.createdAt}) 
-        from ${affiliateReferrals} 
+        select max(${affiliateReferrals.createdAt})
+        from ${affiliateReferrals}
         where ${affiliateReferrals.affiliateId} = ${affiliates.id}
       )`,
     })
@@ -265,7 +274,7 @@ export async function getAffiliateByStripeSession(stripeSessionId: string) {
 
 export async function updateAffiliateProfile(
   affiliateId: number,
-  data: Partial<Pick<Affiliate, "paymentLink" | "isActive">>
+  data: Partial<Pick<Affiliate, "paymentLink" | "paymentMethod" | "isActive">>
 ) {
   const [updated] = await database
     .update(affiliates)
@@ -302,4 +311,156 @@ export async function getMonthlyAffiliateEarnings(
     .orderBy(sql`to_char(${affiliateReferrals.createdAt}, 'YYYY-MM')`);
 
   return earnings;
+}
+
+export async function updateAffiliateStripeAccount(
+  affiliateId: number,
+  data: {
+    stripeConnectAccountId?: string;
+    stripeAccountStatus?: string;
+    stripeChargesEnabled?: boolean;
+    stripePayoutsEnabled?: boolean;
+    stripeDetailsSubmitted?: boolean;
+    lastStripeSync?: Date;
+  }
+) {
+  const [updated] = await database
+    .update(affiliates)
+    .set({
+      ...data,
+      updatedAt: new Date(),
+    })
+    .where(eq(affiliates.id, affiliateId))
+    .returning();
+  return updated;
+}
+
+export async function getAffiliateByStripeAccountId(stripeAccountId: string) {
+  const [affiliate] = await database
+    .select()
+    .from(affiliates)
+    .where(eq(affiliates.stripeConnectAccountId, stripeAccountId));
+  return affiliate;
+}
+
+export async function getAffiliateById(id: number) {
+  const [affiliate] = await database
+    .select()
+    .from(affiliates)
+    .where(eq(affiliates.id, id));
+  return affiliate;
+}
+
+export async function getEligibleAffiliatesForAutoPayout(
+  minimumBalanceCents: number = 5000 // $50 default
+) {
+  // Find affiliates that:
+  // 1. Have Stripe Connect enabled (stripePayoutsEnabled = true)
+  // 2. Have balance >= minimum threshold
+  // 3. Are active
+  const eligibleAffiliates = await database
+    .select()
+    .from(affiliates)
+    .where(
+      and(
+        eq(affiliates.isActive, true),
+        eq(affiliates.stripePayoutsEnabled, true),
+        gte(affiliates.unpaidBalance, minimumBalanceCents)
+      )
+    );
+
+  return eligibleAffiliates;
+}
+
+export async function createAffiliatePayoutWithStripeTransfer(
+  data: AffiliatePayoutCreate & { affiliateId: number; stripeTransferId: string }
+) {
+  // Start a transaction to ensure consistency
+  return await database.transaction(async (tx) => {
+    // Get unpaid referrals to calculate total unpaid amount
+    const unpaidReferrals = await tx
+      .select({
+        id: affiliateReferrals.id,
+        commission: affiliateReferrals.commission,
+      })
+      .from(affiliateReferrals)
+      .where(
+        and(
+          eq(affiliateReferrals.affiliateId, data.affiliateId),
+          eq(affiliateReferrals.isPaid, false)
+        )
+      );
+
+    const totalUnpaidAmount = unpaidReferrals.reduce(
+      (sum, referral) => sum + referral.commission,
+      0
+    );
+
+    // Validate that payout amount doesn't exceed unpaid balance
+    if (data.amount > totalUnpaidAmount) {
+      throw new Error(
+        `Payout amount ($${data.amount / 100}) exceeds unpaid balance ($${totalUnpaidAmount / 100})`
+      );
+    }
+
+    // Create the payout record with stripeTransferId
+    const [payout] = await tx.insert(affiliatePayouts).values({
+      affiliateId: data.affiliateId,
+      amount: data.amount,
+      paymentMethod: data.paymentMethod,
+      transactionId: data.transactionId || null,
+      stripeTransferId: data.stripeTransferId,
+      notes: data.notes || null,
+      paidBy: data.paidBy,
+    }).returning();
+
+    // Update affiliate paid amount and unpaid balance
+    await tx
+      .update(affiliates)
+      .set({
+        paidAmount: sql`${affiliates.paidAmount} + ${data.amount}`,
+        unpaidBalance: sql`${affiliates.unpaidBalance} - ${data.amount}`,
+        updatedAt: new Date(),
+      })
+      .where(eq(affiliates.id, data.affiliateId));
+
+    // Mark referrals as paid up to the payout amount
+    let remainingPayout = data.amount;
+    const referralsToUpdate: number[] = [];
+
+    for (const referral of unpaidReferrals) {
+      if (remainingPayout >= referral.commission) {
+        referralsToUpdate.push(referral.id);
+        remainingPayout -= referral.commission;
+      } else if (remainingPayout > 0) {
+        referralsToUpdate.push(referral.id);
+        remainingPayout = 0;
+      }
+
+      if (remainingPayout === 0) break;
+    }
+
+    // Update the selected referrals as paid
+    if (referralsToUpdate.length > 0) {
+      await tx
+        .update(affiliateReferrals)
+        .set({ isPaid: true })
+        .where(
+          and(
+            eq(affiliateReferrals.affiliateId, data.affiliateId),
+            inArray(affiliateReferrals.id, referralsToUpdate)
+          )
+        );
+    }
+
+    return payout;
+  });
+}
+
+export async function getPayoutByStripeTransferId(stripeTransferId: string) {
+  const [payout] = await database
+    .select()
+    .from(affiliatePayouts)
+    .where(eq(affiliatePayouts.stripeTransferId, stripeTransferId));
+  return payout;
 }

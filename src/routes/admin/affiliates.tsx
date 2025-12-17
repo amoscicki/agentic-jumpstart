@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
+import { Badge } from "~/components/ui/badge";
 
 import {
   Dialog,
@@ -27,6 +28,7 @@ import {
   adminGetAllAffiliatesFn,
   adminToggleAffiliateStatusFn,
   adminRecordPayoutFn,
+  adminProcessAutomaticPayoutsFn,
 } from "~/fn/affiliates";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -42,6 +44,10 @@ import {
   XCircle,
   AlertCircle,
   Copy,
+  Zap,
+  Link as LinkIcon,
+  Clock,
+  RefreshCw,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -158,6 +164,21 @@ function AdminAffiliates() {
     },
   });
 
+  const autoPayoutMutation = useMutation({
+    mutationFn: adminProcessAutomaticPayoutsFn,
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "affiliates"] });
+      toast.success("Auto-Payouts Triggered", {
+        description: `Processed ${result.processed} affiliates: ${result.successful} successful, ${result.failed} failed`,
+      });
+    },
+    onError: (error) => {
+      toast.error("Auto-Payout Failed", {
+        description: error.message || "Failed to trigger automatic payouts.",
+      });
+    },
+  });
+
   const handleToggleStatus = async (
     affiliateId: number,
     currentStatus: boolean
@@ -165,6 +186,10 @@ function AdminAffiliates() {
     await toggleStatusMutation.mutateAsync({
       data: { affiliateId, isActive: !currentStatus },
     });
+  };
+
+  const handleTriggerAutoPayouts = async () => {
+    await autoPayoutMutation.mutateAsync();
   };
 
   const openPayoutDialog = (affiliate: any) => {
@@ -340,10 +365,31 @@ function AdminAffiliates() {
         style={{ animationDelay: "0.6s", animationFillMode: "both" }}
       >
         <div className="p-6 border-b border-border/50">
-          <h2 className="text-2xl font-semibold mb-2">All Affiliates</h2>
-          <p className="text-muted-foreground">
-            View and manage all affiliate accounts
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-semibold mb-2">All Affiliates</h2>
+              <p className="text-muted-foreground">
+                View and manage all affiliate accounts
+              </p>
+            </div>
+            <Button
+              onClick={handleTriggerAutoPayouts}
+              disabled={autoPayoutMutation.isPending}
+              className="bg-theme-500 hover:bg-theme-600"
+            >
+              {autoPayoutMutation.isPending ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Zap className="h-4 w-4 mr-2" />
+                  Trigger Auto-Payouts
+                </>
+              )}
+            </Button>
+          </div>
         </div>
         <div className="p-6">
           {isLoading ? (
@@ -374,7 +420,7 @@ function AdminAffiliates() {
 
                   <div className="relative flex items-start justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3">
+                      <div className="flex items-center gap-3 mb-3 flex-wrap">
                         <span className="text-lg font-semibold text-foreground">
                           {affiliate.userName ||
                             affiliate.userEmail ||
@@ -394,6 +440,38 @@ function AdminAffiliates() {
                         <span className="px-2 py-1 text-xs font-mono bg-muted rounded border">
                           {affiliate.affiliateCode}
                         </span>
+                        {/* Stripe Connect Status Badge */}
+                        {affiliate.paymentMethod === "stripe" && (
+                          <>
+                            {affiliate.stripeAccountStatus === "active" && affiliate.stripePayoutsEnabled ? (
+                              <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400 border-purple-200 dark:border-purple-800">
+                                <CreditCard className="h-3 w-3 mr-1" />
+                                Stripe Connected
+                              </Badge>
+                            ) : affiliate.stripeAccountStatus === "onboarding" ? (
+                              <Badge variant="outline" className="border-orange-300 text-orange-600 dark:border-orange-600 dark:text-orange-400">
+                                <AlertCircle className="h-3 w-3 mr-1" />
+                                Onboarding
+                              </Badge>
+                            ) : affiliate.stripeAccountStatus === "restricted" ? (
+                              <Badge variant="outline" className="border-red-300 text-red-600 dark:border-red-600 dark:text-red-400">
+                                <AlertCircle className="h-3 w-3 mr-1" />
+                                Restricted
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="border-gray-300 text-gray-600 dark:border-gray-600 dark:text-gray-400">
+                                <LinkIcon className="h-3 w-3 mr-1" />
+                                Not Connected
+                              </Badge>
+                            )}
+                          </>
+                        )}
+                        {affiliate.paymentMethod === "link" && (
+                          <Badge variant="outline" className="border-blue-300 text-blue-600 dark:border-blue-600 dark:text-blue-400">
+                            <DollarSign className="h-3 w-3 mr-1" />
+                            Payment Link
+                          </Badge>
+                        )}
                       </div>
 
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -431,7 +509,7 @@ function AdminAffiliates() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-6 mt-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-6 mt-4 text-sm text-muted-foreground flex-wrap">
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4" />
                           <span>Joined {formatDate(affiliate.createdAt)}</span>
@@ -442,6 +520,14 @@ function AdminAffiliates() {
                             Last sale {formatDate(affiliate.lastReferralDate)}
                           </span>
                         </div>
+                        {affiliate.paymentMethod === "stripe" && affiliate.lastStripeSync && (
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4" />
+                            <span>
+                              Stripe synced {formatDate(affiliate.lastStripeSync)}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
