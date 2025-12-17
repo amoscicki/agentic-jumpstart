@@ -38,8 +38,10 @@ import {
 } from "lucide-react";
 import { queryOptions } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { assertFeatureEnabled } from "~/lib/feature-flags";
 
 export const Route = createFileRoute("/launch-kits/$slug")({
+  beforeLoad: () => assertFeatureEnabled("LAUNCH_KITS_FEATURE"),
   loader: async ({ context, params }) => {
     const launchKitQuery = getLaunchKitQuery(params.slug);
     const commentsQuery = getCommentsQuery(params.slug);

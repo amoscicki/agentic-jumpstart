@@ -47,13 +47,7 @@ import { ModeToggle } from "~/components/ModeToggle";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { useQuery } from "@tanstack/react-query";
 import { checkIfUserIsAffiliateFn } from "~/fn/affiliates";
-import {
-  getAgentsFeatureEnabledFn,
-  getAffiliatesFeatureEnabledFn,
-  getLaunchKitsFeatureEnabledFn,
-  getNewsFeatureEnabledFn,
-  getBlogFeatureEnabledFn,
-} from "~/fn/app-settings";
+import { useFeatureFlag } from "~/components/feature-flag";
 
 interface NavLink {
   to: string;
@@ -518,35 +512,11 @@ export function Header() {
     enabled: !!user && !user.isAdmin,
   });
 
-  // Check if agents feature is enabled
-  const { data: agentsFeatureEnabled } = useQuery({
-    queryKey: ["agentsFeatureEnabled"],
-    queryFn: () => getAgentsFeatureEnabledFn(),
-  });
-
-  // Check if affiliates feature is enabled
-  const { data: affiliatesFeatureEnabled } = useQuery({
-    queryKey: ["affiliatesFeatureEnabled"],
-    queryFn: () => getAffiliatesFeatureEnabledFn(),
-  });
-
-  // Check if launch kits feature is enabled
-  const { data: launchKitsFeatureEnabled } = useQuery({
-    queryKey: ["launchKitsFeatureEnabled"],
-    queryFn: () => getLaunchKitsFeatureEnabledFn(),
-  });
-
-  // Check if news feature is enabled
-  const { data: newsFeatureEnabled } = useQuery({
-    queryKey: ["newsFeatureEnabled"],
-    queryFn: () => getNewsFeatureEnabledFn(),
-  });
-
-  // Check if blog feature is enabled
-  const { data: blogFeatureEnabled } = useQuery({
-    queryKey: ["blogFeatureEnabled"],
-    queryFn: () => getBlogFeatureEnabledFn(),
-  });
+  const { isEnabled: agentsFeatureEnabled } = useFeatureFlag("AGENTS_FEATURE");
+  const { isEnabled: affiliatesFeatureEnabled } = useFeatureFlag("AFFILIATES_FEATURE");
+  const { isEnabled: launchKitsFeatureEnabled } = useFeatureFlag("LAUNCH_KITS_FEATURE");
+  const { isEnabled: newsFeatureEnabled } = useFeatureFlag("NEWS_FEATURE");
+  const { isEnabled: blogFeatureEnabled } = useFeatureFlag("BLOG_FEATURE");
 
   const navData = {
     user,

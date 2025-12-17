@@ -1,6 +1,5 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { cn } from "~/lib/utils";
-import { useQuery } from "@tanstack/react-query";
 import {
   Users,
   MessageSquare,
@@ -18,12 +17,7 @@ import {
   TrendingUp,
   Video,
 } from "lucide-react";
-import {
-  getLaunchKitsFeatureEnabledFn,
-  getAffiliatesFeatureEnabledFn,
-  getBlogFeatureEnabledFn,
-  getNewsFeatureEnabledFn,
-} from "~/fn/app-settings";
+import { useFeatureFlag } from "~/components/feature-flag";
 
 interface NavigationItem {
   name: string;
@@ -158,28 +152,11 @@ function getGroupedNavigationItems() {
 export function AdminNav({ onItemClick }: AdminNavProps = {}) {
   const location = useLocation();
 
-  // Fetch feature states
-  const { data: launchKitsEnabled } = useQuery({
-    queryKey: ["launchKitsFeature"],
-    queryFn: () => getLaunchKitsFeatureEnabledFn(),
-  });
+  const { isEnabled: launchKitsEnabled } = useFeatureFlag("LAUNCH_KITS_FEATURE");
+  const { isEnabled: affiliatesEnabled } = useFeatureFlag("AFFILIATES_FEATURE");
+  const { isEnabled: blogEnabled } = useFeatureFlag("BLOG_FEATURE");
+  const { isEnabled: newsEnabled } = useFeatureFlag("NEWS_FEATURE");
 
-  const { data: affiliatesEnabled } = useQuery({
-    queryKey: ["affiliatesFeature"],
-    queryFn: () => getAffiliatesFeatureEnabledFn(),
-  });
-
-  const { data: blogEnabled } = useQuery({
-    queryKey: ["blogFeature"],
-    queryFn: () => getBlogFeatureEnabledFn(),
-  });
-
-  const { data: newsEnabled } = useQuery({
-    queryKey: ["newsFeature"],
-    queryFn: () => getNewsFeatureEnabledFn(),
-  });
-
-  // Map feature keys to their enabled states
   const featureStates = {
     launchKits: launchKitsEnabled,
     affiliates: affiliatesEnabled,

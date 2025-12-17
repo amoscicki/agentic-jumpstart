@@ -9,8 +9,10 @@ import {
   useLaunchKitsFiltering,
   useCloneAction,
 } from "./-components";
+import { assertFeatureEnabled } from "~/lib/feature-flags";
 
 export const Route = createFileRoute("/launch-kits/")({
+  beforeLoad: () => assertFeatureEnabled("LAUNCH_KITS_FEATURE"),
   loader: ({ context }) => {
     context.queryClient.ensureQueryData(allLaunchKitsQuery);
     context.queryClient.ensureQueryData(tagsByCategoryQuery);

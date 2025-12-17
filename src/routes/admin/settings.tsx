@@ -1,13 +1,6 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "~/components/ui/card";
 import { PageHeader } from "~/routes/admin/-components/page-header";
-import { Shield, Bot, Package, DollarSign, Newspaper } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   toggleEarlyAccessModeFn,
@@ -22,171 +15,167 @@ import {
   getBlogFeatureEnabledFn,
   getNewsFeatureEnabledFn,
   toggleNewsFeatureFn,
+  getFeatureFlagEnabledFn,
+  toggleFeatureFlagFn,
 } from "~/fn/app-settings";
+import { getFeatureFlagTargetingFn } from "~/fn/feature-flags";
 import { assertIsAdminFn } from "~/fn/auth";
-import { Switch } from "~/components/ui/switch";
-import { Label } from "~/components/ui/label";
 import { toast } from "sonner";
 import { Page } from "./-components/page";
+import { TargetingDialog } from "./settings/-components/targeting-dialog";
+import { FeatureFlagCard } from "./settings/-components/feature-flag-card";
+import { FEATURE_FLAGS_CONFIG } from "./settings/-components/feature-flags-config";
+import { FLAGS, type FlagKey } from "~/config";
+
+interface FlagHookConfig {
+  queryKey: string;
+  getFn: () => Promise<boolean>;
+  toggleFn: (params: { data: { enabled: boolean } }) => Promise<unknown>;
+  successMessage: string;
+  errorMessage: string;
+}
+
+const FLAG_HOOKS: Record<FlagKey, FlagHookConfig> = {
+  [FLAGS.EARLY_ACCESS_MODE]: {
+    queryKey: "earlyAccessMode",
+    getFn: getEarlyAccessModeFn,
+    toggleFn: toggleEarlyAccessModeFn,
+    successMessage: "Early access mode updated successfully",
+    errorMessage: "Failed to update early access mode",
+  },
+  [FLAGS.AGENTS_FEATURE]: {
+    queryKey: "agentsFeature",
+    getFn: getAgentsFeatureEnabledFn,
+    toggleFn: toggleAgentsFeatureFn,
+    successMessage: "Agents feature updated successfully",
+    errorMessage: "Failed to update agents feature",
+  },
+  [FLAGS.ADVANCED_AGENTS_FEATURE]: {
+    queryKey: "advancedAgentsFeature",
+    getFn: () => getFeatureFlagEnabledFn({ data: { flagKey: FLAGS.ADVANCED_AGENTS_FEATURE } }),
+    toggleFn: (params: { data: { enabled: boolean } }) =>
+      toggleFeatureFlagFn({ data: { flagKey: FLAGS.ADVANCED_AGENTS_FEATURE, enabled: params.data.enabled } }),
+    successMessage: "Advanced agents feature updated successfully",
+    errorMessage: "Failed to update advanced agents feature",
+  },
+  [FLAGS.LAUNCH_KITS_FEATURE]: {
+    queryKey: "launchKitsFeature",
+    getFn: getLaunchKitsFeatureEnabledFn,
+    toggleFn: toggleLaunchKitsFeatureFn,
+    successMessage: "Launch kits feature updated successfully",
+    errorMessage: "Failed to update launch kits feature",
+  },
+  [FLAGS.AFFILIATES_FEATURE]: {
+    queryKey: "affiliatesFeature",
+    getFn: getAffiliatesFeatureEnabledFn,
+    toggleFn: toggleAffiliatesFeatureFn,
+    successMessage: "Affiliates feature updated successfully",
+    errorMessage: "Failed to update affiliates feature",
+  },
+  [FLAGS.BLOG_FEATURE]: {
+    queryKey: "blogFeature",
+    getFn: getBlogFeatureEnabledFn,
+    toggleFn: toggleBlogFeatureFn,
+    successMessage: "Blog feature updated successfully",
+    errorMessage: "Failed to update blog feature",
+  },
+  [FLAGS.NEWS_FEATURE]: {
+    queryKey: "newsFeature",
+    getFn: getNewsFeatureEnabledFn,
+    toggleFn: toggleNewsFeatureFn,
+    successMessage: "News feature updated successfully",
+    errorMessage: "Failed to update news feature",
+  },
+  [FLAGS.VIDEO_SEGMENT_CONTENT_TABS]: {
+    queryKey: "videoSegmentContentTabs",
+    getFn: () => Promise.resolve(false),
+    toggleFn: () => Promise.resolve(undefined),
+    successMessage: "",
+    errorMessage: "",
+  },
+};
+
+// Filter out VIDEO_SEGMENT_CONTENT_TABS from the displayed flags
+const DISPLAYED_FLAGS = FEATURE_FLAGS_CONFIG.filter(
+  (f) => f.key !== FLAGS.VIDEO_SEGMENT_CONTENT_TABS
+);
 
 export const Route = createFileRoute("/admin/settings")({
   beforeLoad: () => assertIsAdminFn(),
   component: SettingsPage,
   loader: ({ context }) => {
-    context.queryClient.ensureQueryData({
-      queryKey: ["earlyAccessMode"],
-      queryFn: () => getEarlyAccessModeFn(),
-    });
-    context.queryClient.ensureQueryData({
-      queryKey: ["agentsFeature"],
-      queryFn: () => getAgentsFeatureEnabledFn(),
-    });
-    context.queryClient.ensureQueryData({
-      queryKey: ["launchKitsFeature"],
-      queryFn: () => getLaunchKitsFeatureEnabledFn(),
-    });
-    context.queryClient.ensureQueryData({
-      queryKey: ["affiliatesFeature"],
-      queryFn: () => getAffiliatesFeatureEnabledFn(),
-    });
-    context.queryClient.ensureQueryData({
-      queryKey: ["blogFeature"],
-      queryFn: () => getBlogFeatureEnabledFn(),
-    });
-    context.queryClient.ensureQueryData({
-      queryKey: ["newsFeature"],
-      queryFn: () => getNewsFeatureEnabledFn(),
+    DISPLAYED_FLAGS.forEach((flag) => {
+      const hookConfig = FLAG_HOOKS[flag.key];
+      context.queryClient.ensureQueryData({
+        queryKey: [hookConfig.queryKey],
+        queryFn: () => hookConfig.getFn(),
+      });
     });
   },
 });
 
-function SettingsPage() {
+function useFeatureFlagState(flagKey: FlagKey) {
   const queryClient = useQueryClient();
+  const hookConfig = FLAG_HOOKS[flagKey];
 
-  const { data: earlyAccessMode } = useQuery({
-    queryKey: ["earlyAccessMode"],
-    queryFn: () => getEarlyAccessModeFn(),
+  const { data: enabled } = useQuery({
+    queryKey: [hookConfig.queryKey],
+    queryFn: () => hookConfig.getFn(),
   });
 
-  const { data: agentsFeature } = useQuery({
-    queryKey: ["agentsFeature"],
-    queryFn: () => getAgentsFeatureEnabledFn(),
+  const { data: targeting } = useQuery({
+    queryKey: ["featureFlagTargeting", flagKey],
+    queryFn: () => getFeatureFlagTargetingFn({ data: { flagKey } }),
   });
 
-  const { data: launchKitsFeature } = useQuery({
-    queryKey: ["launchKitsFeature"],
-    queryFn: () => getLaunchKitsFeatureEnabledFn(),
-  });
-
-  const { data: affiliatesFeature } = useQuery({
-    queryKey: ["affiliatesFeature"],
-    queryFn: () => getAffiliatesFeatureEnabledFn(),
-  });
-
-  const { data: blogFeature } = useQuery({
-    queryKey: ["blogFeature"],
-    queryFn: () => getBlogFeatureEnabledFn(),
-  });
-
-  const { data: newsFeature } = useQuery({
-    queryKey: ["newsFeature"],
-    queryFn: () => getNewsFeatureEnabledFn(),
-  });
-
-  const toggleEarlyAccessMutation = useMutation({
-    mutationFn: toggleEarlyAccessModeFn,
+  const toggleMutation = useMutation({
+    mutationFn: hookConfig.toggleFn,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["earlyAccessMode"] });
-      toast.success("Early access mode updated successfully");
+      queryClient.invalidateQueries({ queryKey: [hookConfig.queryKey] });
+      toast.success(hookConfig.successMessage);
     },
     onError: (error) => {
-      toast.error("Failed to update early access mode");
-      console.error("Failed to toggle early access mode:", error);
+      toast.error(hookConfig.errorMessage);
+      console.error(`${hookConfig.errorMessage}:`, error);
     },
   });
 
-  const toggleAgentsFeatureMutation = useMutation({
-    mutationFn: toggleAgentsFeatureFn,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["agentsFeature"] });
-      toast.success("Agents feature updated successfully");
-    },
-    onError: (error) => {
-      toast.error("Failed to update agents feature");
-      console.error("Failed to toggle agents feature:", error);
-    },
-  });
-
-  const toggleLaunchKitsFeatureMutation = useMutation({
-    mutationFn: toggleLaunchKitsFeatureFn,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["launchKitsFeature"] });
-      toast.success("Launch kits feature updated successfully");
-    },
-    onError: (error) => {
-      toast.error("Failed to update launch kits feature");
-      console.error("Failed to toggle launch kits feature:", error);
-    },
-  });
-
-  const toggleAffiliatesFeatureMutation = useMutation({
-    mutationFn: toggleAffiliatesFeatureFn,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["affiliatesFeature"] });
-      toast.success("Affiliates feature updated successfully");
-    },
-    onError: (error) => {
-      toast.error("Failed to update affiliates feature");
-      console.error("Failed to toggle affiliates feature:", error);
-    },
-  });
-
-  const toggleBlogFeatureMutation = useMutation({
-    mutationFn: toggleBlogFeatureFn,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["blogFeature"] });
-      toast.success("Blog feature updated successfully");
-    },
-    onError: (error) => {
-      toast.error("Failed to update blog feature");
-      console.error("Failed to toggle blog feature:", error);
-    },
-  });
-
-  const toggleNewsFeatureMutation = useMutation({
-    mutationFn: toggleNewsFeatureFn,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["newsFeature"] });
-      toast.success("News feature updated successfully");
-    },
-    onError: (error) => {
-      toast.error("Failed to update news feature");
-      console.error("Failed to toggle news feature:", error);
-    },
-  });
-
-  const handleToggleEarlyAccess = (checked: boolean) => {
-    toggleEarlyAccessMutation.mutate({ data: { enabled: checked } });
+  const handleToggle = (checked: boolean) => {
+    toggleMutation.mutate({ data: { enabled: checked } });
   };
 
-  const handleToggleAgentsFeature = (checked: boolean) => {
-    toggleAgentsFeatureMutation.mutate({ data: { enabled: checked } });
+  return {
+    enabled,
+    targeting,
+    isPending: toggleMutation.isPending,
+    handleToggle,
   };
+}
 
-  const handleToggleLaunchKitsFeature = (checked: boolean) => {
-    toggleLaunchKitsFeatureMutation.mutate({ data: { enabled: checked } });
-  };
+function SettingsPage() {
+  const [targetingDialog, setTargetingDialog] = useState<{
+    open: boolean;
+    flagKey: FlagKey | null;
+    flagName: string;
+  }>({ open: false, flagKey: null, flagName: "" });
 
-  const handleToggleAffiliatesFeature = (checked: boolean) => {
-    toggleAffiliatesFeatureMutation.mutate({ data: { enabled: checked } });
-  };
+  // Create state for all displayed flags
+  const flagStates = Object.fromEntries(
+    DISPLAYED_FLAGS.map((flag) => [flag.key, useFeatureFlagState(flag.key)])
+  );
 
-  const handleToggleBlogFeature = (checked: boolean) => {
-    toggleBlogFeatureMutation.mutate({ data: { enabled: checked } });
-  };
+  // Create featureStates record for dependency checking
+  const featureStatesRecord: Record<string, boolean | undefined> = Object.fromEntries(
+    DISPLAYED_FLAGS.map((flag) => [flag.key, flagStates[flag.key]?.enabled])
+  );
 
-  const handleToggleNewsFeature = (checked: boolean) => {
-    toggleNewsFeatureMutation.mutate({ data: { enabled: checked } });
+  // Create flagConfigs record for dependency titles
+  const flagConfigsRecord: Record<string, { title: string }> = Object.fromEntries(
+    DISPLAYED_FLAGS.map((flag) => [flag.key, { title: flag.title }])
+  );
+
+  const openTargetingDialog = (flagKey: FlagKey, flagName: string) => {
+    setTargetingDialog({ open: true, flagKey, flagName });
   };
 
   return (
@@ -200,211 +189,41 @@ function SettingsPage() {
         className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 animate-in fade-in slide-in-from-bottom-2 duration-500"
         style={{ animationDelay: "0.1s", animationFillMode: "both" }}
       >
-        <Card
-          className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-2 duration-500"
-          style={{ animationDelay: "0.2s", animationFillMode: "both" }}
-        >
-          <CardHeader className="flex-shrink-0">
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              Early Access Mode
-            </CardTitle>
-            <CardDescription className="h-20 overflow-hidden">
-              Control whether the platform is in early access mode. When
-              enabled, only admins can access the full site.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex-1 flex flex-col justify-between">
-            <div className="flex items-center space-x-3">
-              <Switch
-                id="early-access-mode"
-                checked={earlyAccessMode ?? false}
-                onCheckedChange={handleToggleEarlyAccess}
-                disabled={toggleEarlyAccessMutation.isPending}
-              />
-              <Label htmlFor="early-access-mode" className="cursor-pointer">
-                {earlyAccessMode ? "Enabled" : "Disabled"}
-              </Label>
-            </div>
-            <p className="mt-3 text-sm text-muted-foreground min-h-[2.5rem]">
-              {earlyAccessMode
-                ? "Only administrators can currently access the site. Regular users will see the early access page."
-                : "The site is open to all users."}
-            </p>
-          </CardContent>
-        </Card>
+        {DISPLAYED_FLAGS.map((flag, index) => {
+          const state = flagStates[flag.key];
+          const animationDelay = `${0.2 + index * 0.1}s`;
 
-        <Card
-          className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-2 duration-500"
-          style={{ animationDelay: "0.3s", animationFillMode: "both" }}
-        >
-          <CardHeader className="flex-shrink-0">
-            <CardTitle className="flex items-center gap-2">
-              <Bot className="h-5 w-5" />
-              Agents Feature
-            </CardTitle>
-            <CardDescription className="h-20 overflow-hidden">
-              Control whether the AI agents feature is available to users. When
-              disabled, agent-related functionality will be hidden.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex-1 flex flex-col justify-between">
-            <div className="flex items-center space-x-3">
-              <Switch
-                id="agents-feature"
-                checked={agentsFeature ?? false}
-                onCheckedChange={handleToggleAgentsFeature}
-                disabled={toggleAgentsFeatureMutation.isPending}
-              />
-              <Label htmlFor="agents-feature" className="cursor-pointer">
-                {agentsFeature ? "Enabled" : "Disabled"}
-              </Label>
-            </div>
-            <p className="mt-3 text-sm text-muted-foreground min-h-[2.5rem]">
-              {agentsFeature
-                ? "Users can access AI agent features and functionality."
-                : "Agent features are hidden from users."}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card
-          className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-2 duration-500"
-          style={{ animationDelay: "0.4s", animationFillMode: "both" }}
-        >
-          <CardHeader className="flex-shrink-0">
-            <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Launch Kits Feature
-            </CardTitle>
-            <CardDescription className="h-20 overflow-hidden">
-              Control whether the launch kits feature is available to users.
-              When disabled, launch kit functionality will be hidden.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex-1 flex flex-col justify-between">
-            <div className="flex items-center space-x-3">
-              <Switch
-                id="launch-kits-feature"
-                checked={launchKitsFeature ?? false}
-                onCheckedChange={handleToggleLaunchKitsFeature}
-                disabled={toggleLaunchKitsFeatureMutation.isPending}
-              />
-              <Label htmlFor="launch-kits-feature" className="cursor-pointer">
-                {launchKitsFeature ? "Enabled" : "Disabled"}
-              </Label>
-            </div>
-            <p className="mt-3 text-sm text-muted-foreground min-h-[2.5rem]">
-              {launchKitsFeature
-                ? "Users can access launch kit features and templates."
-                : "Launch kit features are hidden from users."}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card
-          className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-2 duration-500"
-          style={{ animationDelay: "0.5s", animationFillMode: "both" }}
-        >
-          <CardHeader className="flex-shrink-0">
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5" />
-              Affiliates Feature
-            </CardTitle>
-            <CardDescription className="h-20 overflow-hidden">
-              Control whether the affiliate program features are available to
-              users. When disabled, affiliate-related functionality will be
-              hidden.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex-1 flex flex-col justify-between">
-            <div className="flex items-center space-x-3">
-              <Switch
-                id="affiliates-feature"
-                checked={affiliatesFeature ?? false}
-                onCheckedChange={handleToggleAffiliatesFeature}
-                disabled={toggleAffiliatesFeatureMutation.isPending}
-              />
-              <Label htmlFor="affiliates-feature" className="cursor-pointer">
-                {affiliatesFeature ? "Enabled" : "Disabled"}
-              </Label>
-            </div>
-            <p className="mt-3 text-sm text-muted-foreground min-h-[2.5rem]">
-              {affiliatesFeature
-                ? "Users can access affiliate program features and registration."
-                : "Affiliate features are hidden from users."}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card
-          className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-2 duration-500"
-          style={{ animationDelay: "0.6s", animationFillMode: "both" }}
-        >
-          <CardHeader className="flex-shrink-0">
-            <CardTitle className="flex items-center gap-2">
-              <Newspaper className="h-5 w-5" />
-              Blog Feature
-            </CardTitle>
-            <CardDescription className="h-20 overflow-hidden">
-              Control whether the blog feature is available to users. When
-              disabled, blog-related functionality will be hidden.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex-1 flex flex-col justify-between">
-            <div className="flex items-center space-x-3">
-              <Switch
-                id="blog-feature"
-                checked={blogFeature ?? false}
-                onCheckedChange={handleToggleBlogFeature}
-                disabled={toggleBlogFeatureMutation.isPending}
-              />
-              <Label htmlFor="blog-feature" className="cursor-pointer">
-                {blogFeature ? "Enabled" : "Disabled"}
-              </Label>
-            </div>
-            <p className="mt-3 text-sm text-muted-foreground min-h-[2.5rem]">
-              {blogFeature
-                ? "Users can access blog posts and content creation features."
-                : "Blog features are hidden from users."}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card
-          className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-2 duration-500"
-          style={{ animationDelay: "0.6s", animationFillMode: "both" }}
-        >
-          <CardHeader className="flex-shrink-0">
-            <CardTitle className="flex items-center gap-2">
-              <Newspaper className="h-5 w-5" />
-              News
-            </CardTitle>
-            <CardDescription className="h-20 overflow-hidden">
-              Control whether the news feature is available to users. When
-              disabled, news-related functionality will be hidden.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex-1 flex flex-col justify-between">
-            <div className="flex items-center space-x-3">
-              <Switch
-                id="news-feature"
-                checked={newsFeature ?? false}
-                onCheckedChange={handleToggleNewsFeature}
-                disabled={toggleNewsFeatureMutation.isPending}
-              />
-              <Label htmlFor="news-feature" className="cursor-pointer">
-                {newsFeature ? "Enabled" : "Disabled"}
-              </Label>
-            </div>
-            <p className="mt-3 text-sm text-muted-foreground min-h-[2.5rem]">
-              {newsFeature
-                ? "Users can access news posts and content creation features."
-                : "News features are hidden from users."}
-            </p>
-          </CardContent>
-        </Card>
+          return (
+            <FeatureFlagCard
+              key={flag.key}
+              icon={flag.icon}
+              title={flag.title}
+              description={flag.description}
+              switchId={flag.key.toLowerCase().replace(/_/g, "-")}
+              checked={state.enabled}
+              onCheckedChange={state.handleToggle}
+              isPending={state.isPending}
+              targeting={state.targeting}
+              onConfigureTargeting={() => openTargetingDialog(flag.key, flag.title)}
+              enabledText={flag.enabledText}
+              disabledText={flag.disabledText}
+              animationDelay={animationDelay}
+              dependsOn={flag.dependsOn}
+              featureStates={featureStatesRecord}
+              flagConfigs={flagConfigsRecord}
+            />
+          );
+        })}
       </div>
+
+      {targetingDialog.flagKey && (
+        <TargetingDialog
+          open={targetingDialog.open}
+          onOpenChange={(open) => setTargetingDialog((prev) => ({ ...prev, open }))}
+          flagKey={targetingDialog.flagKey}
+          flagName={targetingDialog.flagName}
+        />
+      )}
     </Page>
   );
 }

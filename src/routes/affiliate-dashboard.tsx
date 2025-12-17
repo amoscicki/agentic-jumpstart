@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { assertFeatureEnabled } from "~/lib/feature-flags";
 import {
   useSuspenseQuery,
   useMutation,
@@ -125,7 +126,10 @@ const statsVariants = {
 };
 
 export const Route = createFileRoute("/affiliate-dashboard")({
-  beforeLoad: () => assertAuthenticatedFn(),
+  beforeLoad: async () => {
+    await assertFeatureEnabled("AFFILIATES_FEATURE");
+    await assertAuthenticatedFn();
+  },
   loader: async ({ context }) => {
     // First check if user is an affiliate
     const affiliateCheck = await context.queryClient.ensureQueryData({

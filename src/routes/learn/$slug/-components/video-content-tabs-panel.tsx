@@ -12,8 +12,8 @@ interface VideoContentTabsPanelProps {
   isLoggedIn: boolean;
   defaultTab?: "content" | "transcripts" | "comments";
   commentId?: number;
-  showContentTabs: boolean;
   isAdmin?: boolean;
+  showContentTabs: boolean;
 }
 
 export function VideoContentTabsPanel({
@@ -21,8 +21,8 @@ export function VideoContentTabsPanel({
   isLoggedIn,
   defaultTab,
   commentId,
-  showContentTabs,
   isAdmin,
+  showContentTabs,
 }: VideoContentTabsPanelProps) {
   // If content tabs are disabled and defaultTab is content, default to comments
   // Transcripts tab is always available, so we only need to handle content tab

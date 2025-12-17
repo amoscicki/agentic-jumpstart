@@ -13,9 +13,11 @@ import { Plus, Bot, Code, Zap, Users, Calendar } from "lucide-react";
 import { isAuthenticatedFn } from "~/fn/auth";
 import { PageHeader } from "../admin/-components/page-header";
 import { Page } from "../admin/-components/page";
+import { assertFeatureEnabled } from "~/lib/feature-flags";
 
 export const Route = createFileRoute("/agents/")({
   component: AgentsListPage,
+  beforeLoad: () => assertFeatureEnabled("AGENTS_FEATURE"),
   loader: async () => {
     const [agents, isAuthenticated] = await Promise.all([
       getPublicAgentsFn(),

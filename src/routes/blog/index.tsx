@@ -5,8 +5,10 @@ import { queryOptions } from "@tanstack/react-query";
 import { Badge } from "~/components/ui/badge";
 import { Calendar, User, ArrowRight } from "lucide-react";
 import { BlogImage } from "~/components/blog-image";
+import { assertFeatureEnabled } from "~/lib/feature-flags";
 
 export const Route = createFileRoute("/blog/")({
+  beforeLoad: () => assertFeatureEnabled("BLOG_FEATURE"),
   loader: ({ context }) => {
     context.queryClient.ensureQueryData(blogPostsQuery);
   },

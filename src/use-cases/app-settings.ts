@@ -8,7 +8,9 @@ import {
   isBlogFeatureEnabled as checkBlogFeatureEnabled,
   isNewsFeatureEnabled as checkNewsFeatureEnabled,
   isVideoSegmentContentTabsEnabled as checkVideoSegmentContentTabsEnabled,
+  isFeatureFlagEnabled,
 } from "~/data-access/app-settings";
+import { type FlagKey } from "~/config";
 
 export async function getAppSettingsUseCase() {
   const settings = await getAllAppSettings();
@@ -77,4 +79,20 @@ export async function getVideoSegmentContentTabsEnabledUseCase() {
 
 export async function toggleVideoSegmentContentTabsUseCase(enabled: boolean) {
   await setAppSetting("VIDEO_SEGMENT_CONTENT_TABS", enabled.toString());
+}
+
+/**
+ * Generic function to get the enabled state of any feature flag.
+ * Use this for new flags instead of creating individual use-case functions.
+ */
+export async function getFeatureFlagEnabledUseCase(flagKey: FlagKey) {
+  return isFeatureFlagEnabled(flagKey);
+}
+
+/**
+ * Generic function to toggle any feature flag.
+ * Use this for new flags instead of creating individual use-case functions.
+ */
+export async function toggleFeatureFlagUseCase(flagKey: FlagKey, enabled: boolean) {
+  await setAppSetting(flagKey, enabled.toString());
 }

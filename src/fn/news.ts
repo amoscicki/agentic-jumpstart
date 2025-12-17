@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { adminMiddleware, unauthenticatedMiddleware } from "~/lib/auth";
+import { createFeatureFlagMiddleware } from "~/lib/feature-flags";
 import {
   createNewsEntryUseCase,
   createNewsTagUseCase,
@@ -17,11 +18,13 @@ import {
   type UpdateNewsTagInput,
 } from "~/use-cases/news";
 
+const newsFeatureMiddleware = createFeatureFlagMiddleware("NEWS_FEATURE");
+
 // Public news functions (no authentication required)
 export const getPublishedNewsEntriesFn = createServerFn({
   method: "GET",
 })
-  .middleware([unauthenticatedMiddleware])
+  .middleware([unauthenticatedMiddleware, newsFeatureMiddleware])
   .handler(async () => {
     return getPublishedNewsEntriesUseCase();
   });
@@ -29,7 +32,7 @@ export const getPublishedNewsEntriesFn = createServerFn({
 export const getAllNewsTagsFn = createServerFn({
   method: "GET",
 })
-  .middleware([unauthenticatedMiddleware])
+  .middleware([unauthenticatedMiddleware, newsFeatureMiddleware])
   .handler(async () => {
     return getAllNewsTagsUseCase();
   });

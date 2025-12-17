@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { AFFILIATE_CONFIG } from "~/config";
+import { assertFeatureEnabled } from "~/lib/feature-flags";
 import { Button, buttonVariants } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Checkbox } from "~/components/ui/checkbox";
@@ -52,6 +53,7 @@ const affiliateFormSchema = z.object({
 type AffiliateFormValues = z.infer<typeof affiliateFormSchema>;
 
 export const Route = createFileRoute("/affiliates")({
+  beforeLoad: () => assertFeatureEnabled("AFFILIATES_FEATURE"),
   loader: async ({ context }) => {
     const isAffiliate = await context.queryClient.ensureQueryData({
       queryKey: ["user", "isAffiliate"],

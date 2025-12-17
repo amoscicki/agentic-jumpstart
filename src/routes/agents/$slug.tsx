@@ -27,9 +27,11 @@ import { isAuthenticatedFn } from "~/fn/auth";
 import { Page } from "~/routes/admin/-components/page";
 import { Title } from "~/components/title";
 import { PageHeader } from "../admin/-components/page-header";
+import { assertFeatureEnabled } from "~/lib/feature-flags";
 
 export const Route = createFileRoute("/agents/$slug")({
   component: AgentDetailPage,
+  beforeLoad: () => assertFeatureEnabled("AGENTS_FEATURE"),
   loader: async ({ params }) => {
     const [agent, isAuthenticated] = await Promise.all([
       getAgentBySlugFn({ data: { slug: params.slug } }),

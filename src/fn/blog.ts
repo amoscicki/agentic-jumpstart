@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { adminMiddleware, unauthenticatedMiddleware } from "~/lib/auth";
+import { createFeatureFlagMiddleware } from "~/lib/feature-flags";
 import {
   createBlogPostUseCase,
   deleteBlogPostUseCase,
@@ -15,10 +16,12 @@ import {
   type BlogPostFilters,
 } from "~/use-cases/blog";
 
+const blogFeatureMiddleware = createFeatureFlagMiddleware("BLOG_FEATURE");
+
 export const getPublishedBlogPostsFn = createServerFn({
   method: "GET",
 })
-  .middleware([unauthenticatedMiddleware])
+  .middleware([unauthenticatedMiddleware, blogFeatureMiddleware])
   .handler(async () => {
     return getPublishedBlogPostsUseCase();
   });
@@ -26,7 +29,7 @@ export const getPublishedBlogPostsFn = createServerFn({
 export const getBlogPostBySlugFn = createServerFn({
   method: "POST",
 })
-  .middleware([unauthenticatedMiddleware])
+  .middleware([unauthenticatedMiddleware, blogFeatureMiddleware])
   .validator((data: { slug: string }) => data)
   .handler(async ({ data }: { data: { slug: string } }) => {
     return getBlogPostBySlugUseCase(data.slug);
@@ -88,7 +91,7 @@ export const deleteBlogPostFn = createServerFn({
 export const trackBlogPostViewFn = createServerFn({
   method: "POST",
 })
-  .middleware([unauthenticatedMiddleware])
+  .middleware([unauthenticatedMiddleware, blogFeatureMiddleware])
   .validator((data: { blogPostId: number; sessionId: string; ipAddressHash?: string; userAgent?: string; referrer?: string }) => data)
   .handler(async ({ data }: { data: { blogPostId: number; sessionId: string; ipAddressHash?: string; userAgent?: string; referrer?: string } }) => {
     return trackBlogPostViewUseCase(data);

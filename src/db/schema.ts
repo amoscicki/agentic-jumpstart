@@ -4,6 +4,7 @@ import {
   boolean,
   index,
   integer,
+  pgEnum,
   pgTableCreator,
   serial,
   text,
@@ -424,6 +425,38 @@ export const appSettings = tableCreator(
   (table) => [index("app_settings_key_idx").on(table.key)]
 );
 
+export const targetModeEnum = pgEnum("target_mode_enum", ["all", "premium", "non_premium", "custom"]);
+
+export const featureFlagTargets = tableCreator(
+  "feature_flag_target",
+  {
+    id: serial("id").primaryKey(),
+    flagKey: text("flag_key").notNull().unique(),
+    targetMode: targetModeEnum("target_mode").notNull().default("all"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+);
+
+export const featureFlagUsers = tableCreator(
+  "feature_flag_user",
+  {
+    id: serial("id").primaryKey(),
+    flagKey: text("flag_key")
+      .notNull()
+      .references(() => featureFlagTargets.flagKey, { onDelete: "cascade" }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    enabled: boolean("enabled").notNull().default(true),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("feature_flag_user_unique_idx").on(table.flagKey, table.userId),
+    index("feature_flag_user_key_idx").on(table.flagKey),
+  ]
+);
+
 export const agents = tableCreator(
   "agent",
   {
@@ -809,6 +842,27 @@ export const emailTemplatesRelations = relations(emailTemplates, ({ one }) => ({
   }),
 }));
 
+export const featureFlagTargetsRelations = relations(
+  featureFlagTargets,
+  ({ many }) => ({
+    users: many(featureFlagUsers),
+  })
+);
+
+export const featureFlagUsersRelations = relations(
+  featureFlagUsers,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [featureFlagUsers.userId],
+      references: [users.id],
+    }),
+    target: one(featureFlagTargets, {
+      fields: [featureFlagUsers.flagKey],
+      references: [featureFlagTargets.flagKey],
+    }),
+  })
+);
+
 export const analyticsEvents = tableCreator(
   "analytics_event",
   {
@@ -1056,6 +1110,10 @@ export type EmailTemplate = typeof emailTemplates.$inferSelect;
 export type EmailTemplateCreate = typeof emailTemplates.$inferInsert;
 export type AppSetting = typeof appSettings.$inferSelect;
 export type AppSettingCreate = typeof appSettings.$inferInsert;
+export type FeatureFlagTarget = typeof featureFlagTargets.$inferSelect;
+export type FeatureFlagTargetCreate = typeof featureFlagTargets.$inferInsert;
+export type FeatureFlagUser = typeof featureFlagUsers.$inferSelect;
+export type FeatureFlagUserCreate = typeof featureFlagUsers.$inferInsert;
 export type Agent = typeof agents.$inferSelect;
 export type AgentCreate = typeof agents.$inferInsert;
 

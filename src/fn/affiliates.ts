@@ -5,6 +5,7 @@ import {
   adminMiddleware,
   unauthenticatedMiddleware,
 } from "~/lib/auth";
+import { createFeatureFlagMiddleware } from "~/lib/feature-flags";
 import {
   registerAffiliateUseCase,
   getAffiliateAnalyticsUseCase,
@@ -16,6 +17,8 @@ import {
 } from "~/use-cases/affiliates";
 import { getAffiliateByUserId } from "~/data-access/affiliates";
 
+const affiliatesFeatureMiddleware = createFeatureFlagMiddleware("AFFILIATES_FEATURE");
+
 const registerAffiliateSchema = z.object({
   paymentLink: z.url("Please provide a valid URL"),
   agreedToTerms: z.boolean().refine((val) => val === true, {
@@ -24,7 +27,7 @@ const registerAffiliateSchema = z.object({
 });
 
 export const registerAffiliateFn = createServerFn()
-  .middleware([authenticatedMiddleware])
+  .middleware([authenticatedMiddleware, affiliatesFeatureMiddleware])
   .validator(registerAffiliateSchema)
   .handler(async ({ data, context }) => {
     const affiliate = await registerAffiliateUseCase({
@@ -35,14 +38,14 @@ export const registerAffiliateFn = createServerFn()
   });
 
 export const getAffiliateDashboardFn = createServerFn()
-  .middleware([authenticatedMiddleware])
+  .middleware([authenticatedMiddleware, affiliatesFeatureMiddleware])
   .handler(async ({ context }) => {
     const analytics = await getAffiliateAnalyticsUseCase(context.userId);
     return analytics;
   });
 
 export const checkIfUserIsAffiliateFn = createServerFn()
-  .middleware([unauthenticatedMiddleware])
+  .middleware([unauthenticatedMiddleware, affiliatesFeatureMiddleware])
   .handler(async ({ context }) => {
     if (!context.userId) {
       return { isAffiliate: false };
@@ -56,7 +59,7 @@ const updatePaymentLinkSchema = z.object({
 });
 
 export const updateAffiliatePaymentLinkFn = createServerFn()
-  .middleware([authenticatedMiddleware])
+  .middleware([authenticatedMiddleware, affiliatesFeatureMiddleware])
   .validator(updatePaymentLinkSchema)
   .handler(async ({ data, context }) => {
     const updated = await updateAffiliatePaymentLinkUseCase({

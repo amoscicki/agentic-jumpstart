@@ -27,4 +27,15 @@ pool.query("SELECT NOW()", (err, res) => {
 
 const database = drizzle(pool, { schema });
 
+/** Type for the database instance */
+export type Database = typeof database;
+
+/** Type for a transaction within the database */
+export type Transaction = Parameters<
+  Parameters<typeof database.transaction>[0]
+>[0];
+
+/** Type for database or transaction - use this when a function needs to work with both */
+export type DatabaseOrTransaction = Database | Transaction;
+
 export { database, pool };

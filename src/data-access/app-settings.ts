@@ -1,7 +1,9 @@
 import { eq } from "drizzle-orm";
 import { database } from "~/db";
 import { appSettings } from "~/db/schema";
-import { FLAGS, FALLBACK_CONFIG } from "~/config";
+import { FLAGS, FALLBACK_CONFIG, TARGET_MODES, type FlagKey } from "~/config";
+import { getFeatureFlagTarget, getFeatureFlagUser } from "./feature-flags";
+import { getUser } from "./users";
 
 export async function getAppSetting(key: string) {
   try {
@@ -116,5 +118,63 @@ export async function isVideoSegmentContentTabsEnabled() {
   } catch (error) {
     console.error("Error checking video segment content tabs feature:", error);
     return FALLBACK_CONFIG.VIDEO_SEGMENT_CONTENT_TABS;
+  }
+}
+
+/**
+ * Generic function to check if any feature flag is enabled.
+ * Use this for new flags instead of creating individual functions.
+ */
+export async function isFeatureFlagEnabled(flagKey: FlagKey): Promise<boolean> {
+  try {
+    const setting = await getAppSetting(flagKey);
+    return setting?.value === "true";
+  } catch (error) {
+    console.error(`Error checking feature flag ${flagKey}:`, error);
+    return FALLBACK_CONFIG[flagKey] ?? false;
+  }
+}
+
+export async function isFeatureEnabledForUser(
+  flagKey: FlagKey,
+  userId: number | null
+): Promise<boolean> {
+  try {
+    const setting = await getAppSetting(flagKey);
+    const baseEnabled = setting?.value === "true";
+
+    if (!userId) return baseEnabled;
+
+    const user = await getUser(userId);
+    if (user?.isAdmin) return true;
+
+    const targeting = await getFeatureFlagTarget(flagKey);
+    if (!targeting || targeting.targetMode === TARGET_MODES.ALL) {
+      return baseEnabled;
+    }
+
+    // baseEnabled acts as a global kill switch - if disabled, targeting cannot override
+    if (!baseEnabled) {
+      return false;
+    }
+
+    // When baseEnabled is true, targeting narrows access to specific user groups
+    if (targeting.targetMode === TARGET_MODES.PREMIUM) {
+      return user?.isPremium ?? false;
+    }
+
+    if (targeting.targetMode === TARGET_MODES.NON_PREMIUM) {
+      return !(user?.isPremium ?? false);
+    }
+
+    if (targeting.targetMode === TARGET_MODES.CUSTOM) {
+      const userTarget = await getFeatureFlagUser(flagKey, userId);
+      return userTarget?.enabled ?? false;
+    }
+
+    return baseEnabled;
+  } catch (error) {
+    console.error(`Error checking feature ${flagKey} for user ${userId}:`, error);
+    return false;
   }
 }

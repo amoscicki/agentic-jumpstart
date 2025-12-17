@@ -18,8 +18,10 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "~/components/ui/breadcrumb";
+import { assertFeatureEnabled } from "~/lib/feature-flags";
 
 export const Route = createFileRoute("/blog/$slug")({
+  beforeLoad: () => assertFeatureEnabled("BLOG_FEATURE"),
   loader: ({ context, params }) => {
     context.queryClient.ensureQueryData(blogPostQuery(params.slug));
   },

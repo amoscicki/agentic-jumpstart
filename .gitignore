@@ -27,4 +27,5 @@ backups/*
 .nitro/
 .tanstack/
 
-.automaker/features
+.automaker/features.swarm/
+.idea/

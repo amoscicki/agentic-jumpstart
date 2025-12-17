@@ -26,8 +26,10 @@ import { useState } from "react";
 import { Page } from "./admin/-components/page";
 import { PageHeader } from "./admin/-components/page-header";
 import { Link } from "@tanstack/react-router";
+import { assertFeatureEnabled } from "~/lib/feature-flags";
 
 export const Route = createFileRoute("/news")({
+  beforeLoad: () => assertFeatureEnabled("NEWS_FEATURE"),
   component: NewsPage,
 });
 

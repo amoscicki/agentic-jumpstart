@@ -37,20 +37,40 @@ export const COMPANY_ADDRESS = {
   },
 } as const;
 
-export const FLAGS = {
-  EARLY_ACCESS_MODE: "EARLY_ACCESS_MODE",
-  AGENTS_FEATURE: "AGENTS_FEATURE",
-  LAUNCH_KITS_FEATURE: "LAUNCH_KITS_FEATURE",
-  AFFILIATES_FEATURE: "AFFILIATES_FEATURE",
-  BLOG_FEATURE: "BLOG_FEATURE",
-  NEWS_FEATURE: "NEWS_FEATURE",
-  VIDEO_SEGMENT_CONTENT_TABS: "VIDEO_SEGMENT_CONTENT_TABS",
-};
+/** All feature flag keys - this is the source of truth */
+export const FLAG_KEYS = [
+  "EARLY_ACCESS_MODE",
+  "AGENTS_FEATURE",
+  "ADVANCED_AGENTS_FEATURE",
+  "LAUNCH_KITS_FEATURE",
+  "AFFILIATES_FEATURE",
+  "BLOG_FEATURE",
+  "NEWS_FEATURE",
+  "VIDEO_SEGMENT_CONTENT_TABS",
+] as const;
+
+export type FlagKey = (typeof FLAG_KEYS)[number];
+
+/** FLAGS object for convenient access - derived from FLAG_KEYS */
+export const FLAGS = Object.fromEntries(
+  FLAG_KEYS.map((key) => [key, key])
+) as { [K in FlagKey]: K };
+
+
+export const TARGET_MODES = {
+  ALL: "all",
+  PREMIUM: "premium",
+  NON_PREMIUM: "non_premium",
+  CUSTOM: "custom",
+} as const;
+
+export type TargetMode = (typeof TARGET_MODES)[keyof typeof TARGET_MODES];
 
 // Fallback values for when database is not available
 export const FALLBACK_CONFIG = {
   EARLY_ACCESS_MODE: false,
   AGENTS_FEATURE: true,
+  ADVANCED_AGENTS_FEATURE: false,
   LAUNCH_KITS_FEATURE: true,
   AFFILIATES_FEATURE: true,
   BLOG_FEATURE: true,

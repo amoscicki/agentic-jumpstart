@@ -22,7 +22,7 @@ import { getCommentsQuery } from "~/lib/queries/comments";
 import { VideoControls } from "./-components/video-controls";
 import { VideoContentTabsPanel } from "./-components/video-content-tabs-panel";
 import { UpgradePlaceholder } from "./-components/upgrade-placeholder";
-import { getVideoSegmentContentTabsEnabledFn } from "~/fn/app-settings";
+import { isFeatureEnabledForUserFn } from "~/fn/app-settings";
 import { GlassPanel } from "~/components/ui/glass-panel";
 
 export const Route = createFileRoute("/learn/$slug/_layout/")({
@@ -55,7 +55,7 @@ export const Route = createFileRoute("/learn/$slug/_layout/")({
       getSegmentInfoFn({ data: { slug: params.slug } }),
       isUserPremiumFn(),
       isAdminFn(),
-      getVideoSegmentContentTabsEnabledFn(),
+      isFeatureEnabledForUserFn({ data: { flagKey: "VIDEO_SEGMENT_CONTENT_TABS" } }),
     ]);
 
     if (segments.length === 0) {

@@ -6,9 +6,11 @@ import { Plus } from "lucide-react";
 import { useState } from "react";
 import { PageHeader } from "../admin/-components/page-header";
 import { Page } from "../admin/-components/page";
+import { assertFeatureEnabled } from "~/lib/feature-flags";
 
 export const Route = createFileRoute("/agents/new")({
   beforeLoad: async () => {
+    await assertFeatureEnabled("AGENTS_FEATURE");
     await assertAuthenticatedFn();
   },
   component: CreateAgentPage,
