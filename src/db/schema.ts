@@ -45,6 +45,7 @@ export const profiles = tableCreator("profile", {
     .references(() => users.id, { onDelete: "cascade" })
     .unique(),
   displayName: text("displayName"),
+  realName: text("realName"), // Original name from OAuth provider (can be removed for privacy)
   imageId: text("imageId"),
   image: text("image"),
   bio: text("bio").notNull().default(""),
