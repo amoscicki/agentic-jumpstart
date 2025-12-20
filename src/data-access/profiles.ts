@@ -8,7 +8,7 @@ import {
   users,
 } from "~/db/schema";
 import { UserId } from "~/use-cases/types";
-import { eq, desc, and, count } from "drizzle-orm";
+import { eq, desc, and, count, ilike } from "drizzle-orm";
 
 export async function createProfile(
   userId: UserId,
@@ -157,4 +157,11 @@ export async function getCommunityStats() {
     totalUsers: totalUsersResult.count,
     publicProfiles: publicProfilesResult.count,
   };
+}
+
+export async function displayNameExists(displayName: string): Promise<boolean> {
+  const existing = await database.query.profiles.findFirst({
+    where: ilike(profiles.displayName, displayName),
+  });
+  return existing !== undefined;
 }
