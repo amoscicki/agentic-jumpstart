@@ -33,7 +33,7 @@ import {
   updateProjectFn,
   deleteProjectFn,
 } from "~/fn/profiles";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useState } from "react";
@@ -404,12 +404,16 @@ function EditProfilePage() {
                         Show your alias instead of real name publicly
                       </p>
                     </div>
-                    <Switch
-                      id="useDisplayName"
-                      checked={profileForm.watch("useDisplayName")}
-                      onCheckedChange={(checked) =>
-                        profileForm.setValue("useDisplayName", checked)
-                      }
+                    <Controller
+                      name="useDisplayName"
+                      control={profileForm.control}
+                      render={({ field }) => (
+                        <Switch
+                          id="useDisplayName"
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      )}
                     />
                   </div>
 
@@ -497,12 +501,16 @@ function EditProfilePage() {
                         Show your profile on the community members page
                       </p>
                     </div>
-                    <Switch
-                      id="isPublicProfile"
-                      checked={profileForm.watch("isPublicProfile")}
-                      onCheckedChange={(checked) =>
-                        profileForm.setValue("isPublicProfile", checked)
-                      }
+                    <Controller
+                      name="isPublicProfile"
+                      control={profileForm.control}
+                      render={({ field }) => (
+                        <Switch
+                          id="isPublicProfile"
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      )}
                     />
                   </div>
                 </div>

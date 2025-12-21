@@ -64,9 +64,11 @@ function ProfilePage() {
   const isOwnProfile = currentUserId === userId;
 
   // Use loader data for initial render, query for updates
+  // staleTime: 0 ensures we always fetch fresh data (fixes useDisplayName toggle)
   const { data: profile } = useSuspenseQuery({
     queryKey: ["profile", "public", userId],
     queryFn: () => getPublicProfileFn({ data: { userId } }),
+    staleTime: 0,
   });
 
   // Use query data if available, otherwise fall back to loader data
