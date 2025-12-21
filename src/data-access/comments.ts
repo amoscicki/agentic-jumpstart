@@ -1,6 +1,7 @@
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { database } from "~/db";
 import { CommentCreate, comments, users } from "~/db/schema";
+import { toPublicProfile, addPublicNameForAdmin } from "~/utils/name-helpers";
 
 export type CommentsWithUser = Awaited<ReturnType<typeof getComments>>;
 export type AllCommentsWithDetails = Awaited<
@@ -10,7 +11,7 @@ export type AllCommentsWithDetails = Awaited<
 const MAX_COMMENTS_PER_PAGE = 100;
 
 export async function getComments(segmentId: number) {
-  return database.query.comments.findMany({
+  const results = await database.query.comments.findMany({
     where: and(eq(comments.segmentId, segmentId), isNull(comments.parentId)),
     with: {
       profile: true,
@@ -23,6 +24,16 @@ export async function getComments(segmentId: number) {
     },
     orderBy: [desc(comments.createdAt)],
   });
+
+  return results.map((comment) => ({
+    ...comment,
+    profile: toPublicProfile(comment.profile),
+    children: comment.children.map((child) => ({
+      ...child,
+      profile: toPublicProfile(child.profile),
+      repliedToProfile: child.repliedToProfile ? toPublicProfile(child.repliedToProfile) : null,
+    })),
+  }));
 }
 
 export async function createComment(comment: CommentCreate) {
@@ -86,9 +97,14 @@ export async function getAllRecentComments(
   });
   const adminUserIds = new Set(adminUsers.map((user) => user.id));
 
-  // Add hasAdminReply flag to each comment
   const commentsWithAdminFlag = allComments.map((comment) => ({
     ...comment,
+    profile: addPublicNameForAdmin(comment.profile),
+    children: comment.children.map((child) => ({
+      ...child,
+      profile: addPublicNameForAdmin(child.profile),
+      repliedToProfile: child.repliedToProfile ? addPublicNameForAdmin(child.repliedToProfile) : null,
+    })),
     hasAdminReply:
       comment.children?.some((child) =>
         adminUserIds.has(child.profile.userId)

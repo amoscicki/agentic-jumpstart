@@ -126,7 +126,7 @@ export function CommentForm({ autoFocus = false }: { autoFocus?: boolean }) {
                   className="max-h-10 w-auto object-cover"
                   src={
                     profile?.image ??
-                    `https://api.dicebear.com/9.x/initials/svg?seed=${profile?.displayName || "user"}&backgroundColor=6366f1&textColor=ffffff`
+                    `https://api.dicebear.com/9.x/initials/svg?seed=${(profile?.useDisplayName === false && profile?.realName) ? profile.realName : (profile?.displayName || "user")}&backgroundColor=6366f1&textColor=ffffff`
                   }
                   alt="Your avatar"
                 />

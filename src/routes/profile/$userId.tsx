@@ -64,9 +64,11 @@ function ProfilePage() {
   const isOwnProfile = currentUserId === userId;
 
   // Use loader data for initial render, query for updates
+  // staleTime: 0 ensures we always fetch fresh data (fixes useDisplayName toggle)
   const { data: profile } = useSuspenseQuery({
     queryKey: ["profile", "public", userId],
     queryFn: () => getPublicProfileFn({ data: { userId } }),
+    staleTime: 0,
   });
 
   // Use query data if available, otherwise fall back to loader data
@@ -133,24 +135,24 @@ function ProfilePage() {
     );
   }
 
-  const initials = profileData.displayName
-    ? profile.displayName
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-    : "U";
+  const publicName = profileData.publicName || profileData.displayName || "User";
+  const initials = publicName
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
   return (
     <Page>
       <div className="max-w-4xl mx-auto">
         <div className="flex items-start justify-between">
           <PageHeader
-            title={profile.displayName || "User Profile"}
-            highlightedWord={profile.displayName?.split(" ")[0] || "User"}
+            title={publicName}
+            highlightedWord={publicName.split(" ")[0] || "User"}
             description={
               <span>
-                Explore {profile.displayName || "this user"}'s work and projects
+                Explore {publicName}'s work and projects
               </span>
             }
           />
@@ -174,18 +176,11 @@ function ProfilePage() {
                   <Avatar className="w-32 h-32 shadow-elevation-2">
                     <AvatarImage
                       src={profile.image || undefined}
-                      alt={profile.displayName || "User"}
+                      alt={publicName}
                       className="object-cover"
                     />
                     <AvatarFallback className="bg-theme-500 text-white text-4xl font-semibold">
-                      {profileData.displayName
-                        ? profileData.displayName
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")
-                            .toUpperCase()
-                            .slice(0, 2)
-                        : "U"}
+                      {initials}
                     </AvatarFallback>
                   </Avatar>
                 </div>
@@ -194,7 +189,7 @@ function ProfilePage() {
                 <div className="flex-1 space-y-4">
                   <div>
                     <h1 className="text-3xl font-bold mb-2">
-                      {profileData.displayName || "User"}
+                      {publicName}
                     </h1>
                     {profileData.bio && (
                       <p className="text-muted-foreground text-lg leading-relaxed">
@@ -265,8 +260,7 @@ function ProfilePage() {
                   </Badge>
                 </CardTitle>
                 <CardDescription>
-                  Explore the projects and work by{" "}
-                  {profileData.displayName || "this user"}
+                  Explore the projects and work by {publicName}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -360,8 +354,7 @@ function ProfilePage() {
                       No Projects Yet
                     </h3>
                     <p className="text-muted-foreground">
-                      {profileData.displayName || "This user"} hasn't added any
-                      projects to showcase yet.
+                      {publicName} hasn't added any projects to showcase yet.
                     </p>
                   </div>
                 </div>

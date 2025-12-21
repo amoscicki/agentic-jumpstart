@@ -246,12 +246,12 @@ function MembersPage() {
                             <Avatar className="w-24 h-24 border-4 border-background shadow-xl">
                               <AvatarImage
                                 src={member.image || undefined}
-                                alt={member.displayName || "Member"}
+                                alt={member.publicName || "Member"}
                                 className="object-cover transition-transform duration-500 group-hover:scale-110"
                               />
                               <AvatarFallback className="bg-theme-100 dark:bg-theme-900 text-theme-600 dark:text-theme-300 text-2xl font-bold">
-                                {member.displayName
-                                  ? member.displayName
+                                {member.publicName
+                                  ? member.publicName
                                       .split(" ")
                                       .map((n) => n[0])
                                       .join("")
@@ -265,7 +265,7 @@ function MembersPage() {
 
                         <div className="flex-1 w-full">
                           <h3 className="font-bold text-lg truncate px-2 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-theme-500 group-hover:to-purple-500 transition-all duration-300">
-                            {member.displayName || "Anonymous"}
+                            {member.publicName || "Anonymous"}
                           </h3>
                           <p className="text-sm text-muted-foreground line-clamp-2 mt-2 min-h-[2.5rem] px-2">
                             {member.bio || "Member of the Agentic Community"}
