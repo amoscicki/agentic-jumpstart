@@ -61,6 +61,20 @@ export async function getProfileWithProjects(userId: UserId) {
   return profile;
 }
 
+/**
+ * Returns the name to display publicly based on useDisplayName setting
+ */
+function getPublicName(profile: {
+  displayName: string | null;
+  realName: string | null;
+  useDisplayName: boolean;
+}): string {
+  if (profile.useDisplayName || !profile.realName) {
+    return profile.displayName || "Anonymous";
+  }
+  return profile.realName;
+}
+
 export async function getPublicProfile(userId: UserId) {
   const profile = await database.query.profiles.findFirst({
     where: and(eq(profiles.userId, userId), eq(profiles.isPublicProfile, true)),
@@ -73,9 +87,11 @@ export async function getPublicProfile(userId: UserId) {
   });
 
   if (profile) {
-    // Return profile without sensitive information
+    // Return profile with computed publicName based on useDisplayName setting
+    const publicName = getPublicName(profile);
     return {
       ...profile,
+      publicName,
       projects: profile.projects || [],
     };
   }
@@ -132,6 +148,8 @@ export async function getPublicMembers() {
     .select({
       id: users.id,
       displayName: profiles.displayName,
+      realName: profiles.realName,
+      useDisplayName: profiles.useDisplayName,
       image: profiles.image,
       bio: profiles.bio,
       flair: profiles.flair,
@@ -142,7 +160,11 @@ export async function getPublicMembers() {
     .where(eq(profiles.isPublicProfile, true))
     .orderBy(desc(profiles.updatedAt));
 
-  return members;
+  // Compute publicName for each member based on their useDisplayName setting
+  return members.map((member) => ({
+    ...member,
+    publicName: getPublicName(member),
+  }));
 }
 
 export async function getCommunityStats() {

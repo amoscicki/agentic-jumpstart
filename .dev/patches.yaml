@@ -2,5 +2,5 @@
 # Toggle patches on/off with: git dev-patch toggle <name>
 
 patches:
-  dev-login-bypass: off
-  mock-storage: off
+  dev-login-bypass: on
+  mock-storage: on
