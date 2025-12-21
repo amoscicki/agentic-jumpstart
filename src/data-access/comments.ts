@@ -1,6 +1,6 @@
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { database } from "~/db";
-import { CommentCreate, comments, users } from "~/db/schema";
+import { CommentCreate, comments, users, Profile } from "~/db/schema";
 
 export type CommentsWithUser = Awaited<ReturnType<typeof getComments>>;
 export type AllCommentsWithDetails = Awaited<
@@ -9,8 +9,34 @@ export type AllCommentsWithDetails = Awaited<
 
 const MAX_COMMENTS_PER_PAGE = 100;
 
+/**
+ * Returns the name to display publicly based on useDisplayName setting
+ */
+function getPublicName(profile: {
+  displayName: string | null;
+  realName: string | null;
+  useDisplayName: boolean;
+}): string {
+  if (profile.useDisplayName || !profile.realName) {
+    return profile.displayName || "Anonymous";
+  }
+  return profile.realName;
+}
+
+/**
+ * Add publicName to a profile object
+ */
+function addPublicName<T extends { displayName: string | null; realName: string | null; useDisplayName: boolean }>(
+  profile: T
+): T & { publicName: string } {
+  return {
+    ...profile,
+    publicName: getPublicName(profile),
+  };
+}
+
 export async function getComments(segmentId: number) {
-  return database.query.comments.findMany({
+  const results = await database.query.comments.findMany({
     where: and(eq(comments.segmentId, segmentId), isNull(comments.parentId)),
     with: {
       profile: true,
@@ -23,6 +49,17 @@ export async function getComments(segmentId: number) {
     },
     orderBy: [desc(comments.createdAt)],
   });
+
+  // Add publicName to all profiles
+  return results.map((comment) => ({
+    ...comment,
+    profile: addPublicName(comment.profile),
+    children: comment.children.map((child) => ({
+      ...child,
+      profile: addPublicName(child.profile),
+      repliedToProfile: child.repliedToProfile ? addPublicName(child.repliedToProfile) : null,
+    })),
+  }));
 }
 
 export async function createComment(comment: CommentCreate) {
@@ -86,9 +123,15 @@ export async function getAllRecentComments(
   });
   const adminUserIds = new Set(adminUsers.map((user) => user.id));
 
-  // Add hasAdminReply flag to each comment
+  // Add hasAdminReply flag and publicName to each comment
   const commentsWithAdminFlag = allComments.map((comment) => ({
     ...comment,
+    profile: addPublicName(comment.profile),
+    children: comment.children.map((child) => ({
+      ...child,
+      profile: addPublicName(child.profile),
+      repliedToProfile: child.repliedToProfile ? addPublicName(child.repliedToProfile) : null,
+    })),
     hasAdminReply:
       comment.children?.some((child) =>
         adminUserIds.has(child.profile.userId)

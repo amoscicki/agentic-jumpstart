@@ -429,7 +429,17 @@ function CommentItem({
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
                   <span className="font-semibold text-foreground">
-                    {comment.profile.displayName || "Anonymous"}
+                    {comment.profile.publicName || comment.profile.displayName || "Anonymous"}
+                    {comment.profile.useDisplayName !== false && comment.profile.realName && (
+                      <span className="text-muted-foreground font-normal ml-2 text-sm">
+                        (real: {comment.profile.realName})
+                      </span>
+                    )}
+                    {comment.profile.useDisplayName === false && comment.profile.displayName && (
+                      <span className="text-muted-foreground font-normal ml-2 text-sm">
+                        (alias: {comment.profile.displayName})
+                      </span>
+                    )}
                   </span>
                   {hasAdminReply && (
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800">
@@ -568,7 +578,17 @@ function CommentItem({
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           <span className="text-sm font-semibold text-foreground">
-                            {child.profile.displayName || "Anonymous"}
+                            {child.profile.publicName || child.profile.displayName || "Anonymous"}
+                            {child.profile.useDisplayName !== false && child.profile.realName && (
+                              <span className="text-muted-foreground font-normal ml-1 text-xs">
+                                (real: {child.profile.realName})
+                              </span>
+                            )}
+                            {child.profile.useDisplayName === false && child.profile.displayName && (
+                              <span className="text-muted-foreground font-normal ml-1 text-xs">
+                                (alias: {child.profile.displayName})
+                              </span>
+                            )}
                           </span>
                           <span className="text-xs text-muted-foreground">
                             {getTimeAgo(child.createdAt)}
