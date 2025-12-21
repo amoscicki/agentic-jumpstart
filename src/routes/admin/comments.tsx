@@ -416,9 +416,9 @@ function CommentItem({
                   className="size-full object-cover"
                   src={
                     comment.profile.image ??
-                    `https://api.dicebear.com/9.x/initials/svg?seed=${comment.profile.displayName || "user"}&backgroundColor=6366f1&textColor=ffffff`
+                    `https://api.dicebear.com/9.x/initials/svg?seed=${comment.profile.publicName || "user"}&backgroundColor=6366f1&textColor=ffffff`
                   }
-                  alt={comment.profile.displayName || "User"}
+                  alt={comment.profile.publicName || "User"}
                 />
                 {hasAdminReply && (
                   <div className="absolute -top-1 -right-1 size-4 bg-green-500 rounded-full border-2 border-background flex items-center justify-center">
@@ -570,9 +570,9 @@ function CommentItem({
                           className="size-full object-cover"
                           src={
                             child.profile.image ??
-                            `https://api.dicebear.com/9.x/initials/svg?seed=${child.profile.displayName || "user"}&backgroundColor=6366f1&textColor=ffffff`
+                            `https://api.dicebear.com/9.x/initials/svg?seed=${child.profile.publicName || "user"}&backgroundColor=6366f1&textColor=ffffff`
                           }
-                          alt={child.profile.displayName || "User"}
+                          alt={child.profile.publicName || "User"}
                         />
                       </div>
                       <div className="flex-1">

@@ -9,6 +9,7 @@ import {
 } from "~/db/schema";
 import { UserId } from "~/use-cases/types";
 import { eq, desc, and, count, ilike } from "drizzle-orm";
+import { getPublicName } from "~/utils/name-helpers";
 
 export async function createProfile(
   userId: UserId,
@@ -59,20 +60,6 @@ export async function getProfileWithProjects(userId: UserId) {
   });
 
   return profile;
-}
-
-/**
- * Returns the name to display publicly based on useDisplayName setting
- */
-function getPublicName(profile: {
-  displayName: string | null;
-  realName: string | null;
-  useDisplayName: boolean;
-}): string {
-  if (profile.useDisplayName || !profile.realName) {
-    return profile.displayName || "Anonymous";
-  }
-  return profile.realName;
 }
 
 export async function getPublicProfile(userId: UserId) {

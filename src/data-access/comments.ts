@@ -1,6 +1,7 @@
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { database } from "~/db";
-import { CommentCreate, comments, users, Profile } from "~/db/schema";
+import { CommentCreate, comments, users } from "~/db/schema";
+import { getPublicName, addPublicName } from "~/utils/name-helpers";
 
 export type CommentsWithUser = Awaited<ReturnType<typeof getComments>>;
 export type AllCommentsWithDetails = Awaited<
@@ -8,32 +9,6 @@ export type AllCommentsWithDetails = Awaited<
 >;
 
 const MAX_COMMENTS_PER_PAGE = 100;
-
-/**
- * Returns the name to display publicly based on useDisplayName setting
- */
-function getPublicName(profile: {
-  displayName: string | null;
-  realName: string | null;
-  useDisplayName: boolean;
-}): string {
-  if (profile.useDisplayName || !profile.realName) {
-    return profile.displayName || "Anonymous";
-  }
-  return profile.realName;
-}
-
-/**
- * Add publicName to a profile object
- */
-function addPublicName<T extends { displayName: string | null; realName: string | null; useDisplayName: boolean }>(
-  profile: T
-): T & { publicName: string } {
-  return {
-    ...profile,
-    publicName: getPublicName(profile),
-  };
-}
 
 export async function getComments(segmentId: number) {
   const results = await database.query.comments.findMany({
