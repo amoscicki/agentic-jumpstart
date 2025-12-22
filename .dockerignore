@@ -14,7 +14,6 @@ yarn.lock
 /api/
 /server/build
 /public/build
-.vinxi
 .env.sentry-build-plugin
 .labs
 /test-results/
