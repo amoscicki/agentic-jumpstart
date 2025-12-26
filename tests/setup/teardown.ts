@@ -1,9 +1,9 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import pg from "pg";
 import dotenv from "dotenv";
+import path from "path";
+import pg from "pg";
 
-// Load environment variables
-dotenv.config();
+// Load test environment variables (must use .env.test for correct DATABASE_URL_TEST)
+dotenv.config({ path: path.resolve(process.cwd(), ".env.test") });
 
 async function globalTeardown() {
   console.log("🧹 Cleaning up test database connections...");

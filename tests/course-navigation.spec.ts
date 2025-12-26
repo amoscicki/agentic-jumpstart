@@ -70,7 +70,11 @@ test.describe("Course Navigation", () => {
     const backButton = page.getByRole("button", {
       name: TEST_CONFIG.UI_TEXT.PREVIOUS_LESSON_BUTTON,
     });
+    // Wait for all React queries to complete before clicking
+    await page.waitForLoadState("networkidle");
     await backButton.click();
+    // Wait for URL to change (navigation triggered by effect watching currentSegmentId)
+    await page.waitForURL(`**/learn/${TEST_CONFIG.SEGMENTS.WELCOME_TO_COURSE.slug}`, { timeout: 10000 });
     await expect(page.locator("h2")).toHaveText(
       TEST_CONFIG.SEGMENTS.WELCOME_TO_COURSE.title
     );
@@ -134,7 +138,11 @@ test.describe("Course Navigation", () => {
     const nextButton = page.getByRole("button", {
       name: TEST_CONFIG.UI_TEXT.NEXT_VIDEO_BUTTON,
     });
+    // Wait for React queries to complete before clicking
+    await page.waitForLoadState("networkidle");
     await nextButton.click();
+    // Wait for navigation to complete
+    await page.waitForURL(`**/learn/${TEST_CONFIG.SEGMENTS.ADVANCED_PATTERNS.slug}`, { timeout: 10000 });
 
     // Verify we navigated to the next segment (Advanced Patterns - premium)
     await expect(page.locator("h2")).toHaveText(
